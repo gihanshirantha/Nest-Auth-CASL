@@ -16,6 +16,7 @@ import {
   Action,
 } from 'src/ability/ability.factory/ability.factory';
 import { User } from './entities/user.entity';
+import { ForbiddenError } from '@casl/ability';
 
 @Controller('user')
 export class UserController {
@@ -28,11 +29,21 @@ export class UserController {
   create(@Body() createUserDto: CreateUserDto) {
     const user = { id: 1, isAdmin: false };
     const ability = this.abilityFactory.defineAbility(user);
-    const isAllowed = ability.can(Action.Create, User);
-    if (!isAllowed) {
-      throw new ForbiddenException('Only Admin!');
+    // const isAllowed = ability.can(Action.Create, User);
+    // if (!isAllowed) {
+    //   throw new ForbiddenException('Only Admin!');
+    // }
+
+    try {
+      ForbiddenError.from(ability)
+        .setMessage('admin only')
+        .throwUnlessCan(Action.Create, User);
+      return this.userService.create(createUserDto);
+    } catch (error) {
+      if (error instanceof ForbiddenError) {
+        throw new ForbiddenException(error.message);
+      }
     }
-    return this.userService.create(createUserDto);
   }
 
   @Get()
